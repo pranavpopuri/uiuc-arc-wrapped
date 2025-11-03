@@ -35,7 +35,7 @@ exports.handler = async function(event, context) {
       };
     }
 
-    // Check if user exists
+    // Check if user exists and get current data
     const { data: existingData } = await supabase
       .from('user_hours')
       .select('*')
@@ -46,7 +46,21 @@ exports.handler = async function(event, context) {
 
     if (existingData) {
       // Merge existing data with new data
-      const mergedVisits = { ...existingData.hours_data, ...visits };
+      let existingVisits = existingData.hours_data;
+      
+      // Convert old format to new format if needed
+      if (existingVisits && typeof Object.values(existingVisits)[0] === 'number') {
+        const convertedVisits = {};
+        for (const date in existingVisits) {
+          convertedVisits[date] = {
+            ARC: existingVisits[date] > 0 ? 1 : 0,
+            CRCE: 0
+          };
+        }
+        existingVisits = convertedVisits;
+      }
+      
+      const mergedVisits = { ...existingVisits, ...visits };
       
       const { data, error } = await supabase
         .from('user_hours')
