@@ -1,0 +1,11 @@
+{
+    "name": "uiuc-arc-tracker",
+    "version": "1.0.0",
+    "description": "Track ARC/CRCE visits for UIUC students",
+    "scripts": {
+        "build": "echo 'No build process needed for static site'"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "MIT"
+}

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC/CRCE Visit Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <h1>ARC/CRCE Visit Tracker</h1>
+    
+    <div class="container">
+        <div class="input-section">
+            <h3>1. Enter your NetID</h3>
+            <input type="text" id="netIdInput" placeholder="Enter your NetID">
+        </div>
+        
+        <div class="input-section">
+            <h3>2. If you've used ARC/CRCE tracker before</h3>
+            <button onclick="loadFromDatabase()">Load Stored Data</button>
+            <div id="loadStatus"></div>
+        </div>
+        
+        <div class="input-section">
+            <h3>3. Add data file(s)</h3>
+            <input type="file" id="fileInput" accept=".html" multiple>
+            <div id="fileStatus"></div>
+            <div class="instructions">
+                <p><strong>How to Export Your Facility Access Data</strong></p>
+                <ol>
+                    <li><strong>Navigate to the Portal</strong><br>
+                        Visit <a href="https://active.illinois.edu" target="_blank">active.illinois.edu</a> and sign in with your NetID</li>
+                    <li><strong>Access Facility History</strong><br>
+                        Click your <strong>Profile</strong> (top right corner) and select <strong>Facility Access</strong></li>
+                    <li><strong>Get HTML File</strong><br>
+                        Right click <strong>Facility Name</strong> and click <strong>Open Link in New Tab</strong></li>
+                    <li><strong>Export the Data</strong><br>
+                        Right-click anywhere on the page and choose <strong>"Save As"</strong><br>
+                        Save as: <code>GetFacilityAccessInfo.html</code> (select "Web Page, Complete" or "Page Source")</li>
+                    <li><strong>Handle Multiple Pages</strong> (if applicable)<br>
+                        If you see paginated tables (numbered 1, 2, 3...), click on the number of the page you want to save and repeat step 3 for each page</li>
+                    <li><strong>Upload Files</strong><br>
+                        Return here and upload all downloaded HTML files until all your data is processed</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    
+    <hr>
+
+    <h2>Summary</h2>
+    <table id="summaryTable">
+        <thead>
+            <tr>
+                <th>Facility</th>
+                <th>Visits Last Month</th>
+                <th>Visits This Month</th>
+                <th>Total Visits</th>
+                <th>Longest Streak</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <h2>Heatmap (August to May)</h2>
+    
+    <div class="heatmap-wrapper">
+        <div class="heatmap-container">
+            <div class="month-labels" id="monthLabels"></div>
+            <div id="heatmap" class="heatmap"></div>
+        </div>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+
+    <hr>
+
+    <div class="save-section">
+        <h3>4. Save your data</h3>
+        <button id="saveButton" onclick="saveToDatabase()">Save Data</button>
+        <div id="saveStatus"></div>
+        <p class="note">(optional, if you don't want to reupload files every time you access this site)</p>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
