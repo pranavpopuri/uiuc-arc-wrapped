@@ -3,7 +3,10 @@
     "version": "1.0.0",
     "description": "Track ARC/CRCE visits for UIUC students",
     "scripts": {
-        "build": "echo 'No build process needed for static site'"
+        "build": "echo 'No build process needed'"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.38.0"
     },
     "keywords": [],
     "author": "",
