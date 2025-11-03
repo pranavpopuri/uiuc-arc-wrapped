@@ -25,47 +25,35 @@ exports.handler = async function(event, context) {
       };
     }
 
-    const { netId, visits } = JSON.parse(event.body);
+    const { netId, newHoursData } = JSON.parse(event.body); // Changed from 'visits' to 'newHoursData'
 
-    if (!netId || !visits) {
+    if (!netId || !newHoursData) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'NetID and visits data are required' })
+        body: JSON.stringify({ error: 'NetID and hours data are required' })
       };
     }
 
-    // Check if user exists and get current data
-    const { data: existingData } = await supabase
+    // Check if user exists
+    const { data: existingData, error: fetchError } = await supabase
       .from('user_hours')
       .select('*')
       .eq('net_id', netId)
       .single();
 
     let result;
+    let mergedHoursData = newHoursData;
+
+    if (existingData && existingData.hours_data) {
+      mergedHoursData = { ...existingData.hours_data, ...newHoursData };
+    }
 
     if (existingData) {
-      // Merge existing data with new data
-      let existingVisits = existingData.hours_data;
-      
-      // Convert old format to new format if needed
-      if (existingVisits && typeof Object.values(existingVisits)[0] === 'number') {
-        const convertedVisits = {};
-        for (const date in existingVisits) {
-          convertedVisits[date] = {
-            ARC: existingVisits[date] > 0 ? 1 : 0,
-            CRCE: 0
-          };
-        }
-        existingVisits = convertedVisits;
-      }
-      
-      const mergedVisits = { ...existingVisits, ...visits };
-      
       const { data, error } = await supabase
         .from('user_hours')
         .update({
-          hours_data: mergedVisits,
+          hours_data: mergedHoursData,
           updated_at: new Date().toISOString()
         })
         .eq('net_id', netId);
@@ -73,12 +61,11 @@ exports.handler = async function(event, context) {
       if (error) throw error;
       result = data;
     } else {
-      // Create new record
       const { data, error } = await supabase
         .from('user_hours')
         .insert([{
           net_id: netId,
-          hours_data: visits
+          hours_data: newHoursData
         }]);
 
       if (error) throw error;

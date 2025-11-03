@@ -1,10 +1,9 @@
+const API_BASE_URL = '/.netlify/functions';
 const facilitiesToTrack = ["Activities & Recreation Center (ARC)", "Campus Recreation Center East (CRCE)"];
 let dailyVisits = {};
+let dailyHours = {};
 const tooltip = document.getElementById('tooltip');
 const visitColor = '#FF5F05';
-
-// API base URL - Netlify functions
-const API_BASE_URL = '/.netlify/functions';
 
 // Helper function for consistent local date formatting
 function formatDateLocal(date) {
@@ -35,7 +34,6 @@ function calculateLongestStreak(facility) {
         const prevDate = new Date(dates[i-1]);
         const currentDate = new Date(dates[i]);
         
-        // Check if dates are consecutive
         const diffTime = currentDate - prevDate;
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         
@@ -61,6 +59,34 @@ function calculateTotalVisits(facility) {
         }
     }
     return total;
+}
+
+// API call function
+async function apiCall(endpoint, method = 'GET', data = null) {
+    const options = {
+        method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    if (data) {
+        options.body = JSON.stringify(data);
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'API request failed');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('API call failed:', error);
+        throw error;
+    }
 }
 
 // File input handler
@@ -94,7 +120,6 @@ function parseHTML(html) {
     const doc = parser.parseFromString(html, "text/html");
     const rows = doc.querySelectorAll("#grdFacilitiesAccessInfo tbody tr");
 
-    // Track unique facility-date combinations to avoid duplicates
     const uniqueVisits = new Set();
 
     rows.forEach(row => {
@@ -229,71 +254,34 @@ function updateSummary() {
     });
 }
 
-// API functions
-async function apiCall(endpoint, method = 'GET', data = null) {
-    const options = {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    };
-
-    if (data) {
-        options.body = JSON.stringify(data);
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
-        const result = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(result.error || 'API request failed');
-        }
-        
-        return result;
-    } catch (error) {
-        console.error('API call failed:', error);
-        throw error;
-    }
-}
-
 async function saveToDatabase() {
     const netId = document.getElementById('netIdInput').value.trim();
     const saveStatus = document.getElementById('saveStatus');
-    const saveButton = document.getElementById('saveButton');
 
     if (!netId) {
         saveStatus.innerHTML = '<span style="color: #cc3300;">Please enter your NetID</span>';
         return;
     }
 
+    const newHoursData = {};
+    for (const date in dailyVisits) {
+        if (dailyVisits[date].ARC > 0 || dailyVisits[date].CRCE > 0) {
+            newHoursData[date] = dailyHours[date] || 0;
+        }
+    }
+
     saveStatus.innerHTML = '<span style="color: #13294B;">Saving...</span>';
-    saveButton.disabled = true;
-    saveButton.classList.add('loading');
 
     try {
-        // Prepare visit data for saving
-        const visitData = {};
-        for (const date in dailyVisits) {
-            if (dailyVisits[date].ARC > 0 || dailyVisits[date].CRCE > 0) {
-                visitData[date] = {
-                    ARC: dailyVisits[date].ARC,
-                    CRCE: dailyVisits[date].CRCE
-                };
-            }
-        }
-
         await apiCall('/save-visits', 'POST', {
             netId,
-            visits: visitData
+            newHoursData // Changed from 'visits' to 'newHoursData'
         });
 
         saveStatus.innerHTML = '<span style="color: #00a000;">✓ Data saved successfully!</span>';
     } catch (error) {
+        console.error('Error saving to database:', error);
         saveStatus.innerHTML = `<span style="color: #cc3300;">Error: ${error.message}</span>`;
-    } finally {
-        saveButton.disabled = false;
-        saveButton.classList.remove('loading');
     }
 }
 
@@ -311,21 +299,24 @@ async function loadFromDatabase() {
     try {
         const data = await apiCall(`/get-visits?netId=${encodeURIComponent(netId)}`);
         
-        if (data.visits) {
-            // Merge loaded data with current data
-            for (const date in data.visits) {
+        if (data && data.hours_data) {
+            dailyHours = data.hours_data;
+            
+            if (Object.keys(dailyVisits).length === 0) {
+                dailyVisits = {};
+            }
+            
+            for (const date in dailyHours) {
                 if (!dailyVisits[date]) {
-                    dailyVisits[date] = { ARC: 0, CRCE: 0 };
+                    dailyVisits[date] = { ARC: 1, CRCE: 0 };
                 }
-                dailyVisits[date].ARC = dailyVisits[date].ARC || data.visits[date].ARC;
-                dailyVisits[date].CRCE = dailyVisits[date].CRCE || data.visits[date].CRCE;
             }
             
             drawHeatmap();
             updateSummary();
             loadStatus.innerHTML = '<span style="color: #00a000;">✓ Data loaded successfully!</span>';
         } else {
-            loadStatus.innerHTML = '<span style="color: #cc3300;">No data found for this NetID</span>';
+            loadStatus.innerHTML = '<span style="color: #cc3300;">No hours data found</span>';
         }
     } catch (error) {
         if (error.message.includes('No data found')) {
